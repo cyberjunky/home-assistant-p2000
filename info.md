@@ -108,8 +108,8 @@ Above is for html5 notify, you can click the notify message to open google maps 
 ### Screenshots
 
 ![alt text](https://github.com/cyberjunky/home-assistant-p2000/blob/master/screenshots/p2000sensor.png?raw=true "Screenshot Sensor")
-![alt text](https://github.com/cyberjunky/home-assistant-p2000/blob/master/screenshots/p2000map.png "Screenshot Map")
-![alt text](https://github.com/cyberjunky/home-assistant-p2000/blob/master/screenshots/p2000multi.png "Screenshot Multi")
+![alt text](https://github.com/cyberjunky/home-assistant-p2000/blob/master/screenshots/p2000map.png?raw=true "Screenshot Map")
+![alt text](https://github.com/cyberjunky/home-assistant-p2000/blob/master/screenshots/p2000multi.png?raw=true "Screenshot Multi")
 
 Lovelace card example:
 
