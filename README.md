@@ -13,6 +13,14 @@ When events are found the P2000 sensor state gets set, which you can use to trig
 and even plot location on the map.
 
 ### Installation
+
+## HACS - Recommended
+- Have [HACS](https://hacs.xyz) installed, this will allow you to easily update.
+- Add `https://github.com/cyberjunky/home-assistant-p2000` as a [custom repository](https://hacs.xyz/docs/navigation/repository) with Type: Integration
+- Click Install under "P2000" integration.
+- Restart Home-Assistant.
+
+## Manual
 - Copy directory `custom_components/p2000` to your `<config dir>/custom_components` directory.
 - Configure with config below.
 - Restart Home-Assistant.
