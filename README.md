@@ -12,7 +12,7 @@ This component queries http://feeds.livep2000.nl at the configured interval and 
 When events are found the P2000 sensor state gets set, which you can use to trigger automation, display sensor data,
 and even plot location on the map.
 
-# Installation
+### Installation
 
 ## HACS - Recommended
 - Have [HACS](https://hacs.xyz) installed, this will allow you to easily update.
