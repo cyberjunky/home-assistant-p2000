@@ -2,6 +2,5 @@
   "name": "P2000 Sensor",
   "country": "NL",
   "render_readme": false,
-  "domains": ["sensor"],
-  "country": ["NL"]
+  "domains": ["sensor"]
 }
