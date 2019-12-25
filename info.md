@@ -1,10 +1,7 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)  [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)  [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
 
 # P2000 Sensor Component
-This component tracks P2000 emergency events in The Netherlands.
-
-## Home-Assistant Custom Component
-This is a Custom Component for Home-Assistant (https://home-assistant.io)
+This is a Custom Component for Home-Assistant (https://home-assistant.io) that tracks P2000 emergency events in The Netherlands.
 
 ## About
 This component queries http://feeds.livep2000.nl at the configured interval and applies filters for range, type(s) and regio(s) set.
@@ -15,8 +12,9 @@ and even plot location on the map.
 {% if not installed %}
 
 ### Installation
-- Copy directory `custom_components/p2000` to your `<config dir>/custom_components` directory.
-- Configure with config below.
+
+- Install this integration using HACS.
+- Configure using the configuration instructions below.
 - Restart Home-Assistant.
 
 {% endif %}
@@ -131,9 +129,6 @@ cards:
         title: P2000 Dordrecht & Amsterdam
         type: map
 ```
-
-### Changes
-* first release for hacs
 
 ### Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
