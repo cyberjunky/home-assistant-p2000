@@ -11,7 +11,7 @@ and even plot location on the map.
 
 {% if not installed %}
 
-### Installation
+## Installation
 
 - Install this integration using HACS.
 - Configure using the configuration instructions below.
@@ -19,7 +19,7 @@ and even plot location on the map.
 
 {% endif %}
 
-### Usage
+## Usage
 To use this component in your installation, add the following to your `configuration.yaml` file:
 
 ```yaml
@@ -103,7 +103,7 @@ automation:
 
 Above is for html5 notify, you can click the notify message to open google maps with the lat/lon location if available in the P2000 message.
 
-### Screenshots
+## Screenshots
 
 ![alt text](https://github.com/cyberjunky/home-assistant-p2000/blob/master/screenshots/p2000sensor.png?raw=true "Screenshot Sensor")
 ![alt text](https://github.com/cyberjunky/home-assistant-p2000/blob/master/screenshots/p2000map.png?raw=true "Screenshot Map")
@@ -130,5 +130,5 @@ cards:
         type: map
 ```
 
-### Donation
+## Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
