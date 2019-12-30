@@ -9,16 +9,6 @@ This component queries http://feeds.livep2000.nl at the configured interval and 
 When events are found the P2000 sensor state gets set, which you can use to trigger automation, display sensor data,
 and even plot location on the map.
 
-{% if not installed %}
-
-## Installation
-
-- Install this integration using HACS.
-- Configure using the configuration instructions below.
-- Restart Home-Assistant.
-
-{% endif %}
-
 ## Usage
 To use this component in your installation, add the following to your `configuration.yaml` file:
 

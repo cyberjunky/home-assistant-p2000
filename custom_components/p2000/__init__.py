@@ -1,1 +1,1 @@
-"""The P2000 Component"""
+"""The p2000 Component"""
