@@ -35,6 +35,7 @@ sensor:
     disciplines: 1,2,3,4
     radius: 15000
     scan_interval: 20
+    capcodes: 1403001, 1403003
   
   - platform: p2000
     name: Amsterdam
@@ -84,8 +85,7 @@ Configuration variables:
 - **name** (*Optional*): Name for sensor.
 - **lat** (*Optional*): Latitude of center radius.
 - **lon** (*Optional*): Longitude of center radius.
-
-It triggers only on new messages, when you restart home-assistant old messages are skipped.
+- **capcodes** (*Optional*): Capcode(s) you want to filter on. http://capcode.nl
 
 You can use a state trigger event to send push notifications like this:
 ```yaml
@@ -100,7 +100,8 @@ automation:
       - service_template: notify.html5
         data_template:
           title: "P2000 Bericht"
-          message: "{{ states.sensor.p2000.state}}"
+          message: >
+            {{ states.sensor.p2000.state + states.sensor.p2000.attributes.capcodes }}
           data:
             url: "https://www.google.com/maps/search/?api=1&query={{ states.sensor.p2000.attributes.latitude }},{{ states.sensor.p2000.attributes.longitude }}"
 ```
