@@ -118,9 +118,7 @@ class P2000Data(object):
                 if self._feed.bozo != 0:
                     _LOGGER.debug("Error parsing feed %s", self._url)
                 elif len(self._feed.entries) > 0:
-                    _LOGGER.debug("%s entries downloaded",
-                        len(self._feed.entries),
-                        self._url)
+                    _LOGGER.debug("%s entries downloaded", len(self._feed.entries))
 
                     if self._restart:
                         pubdate = self._feed.entries[0]['published']
