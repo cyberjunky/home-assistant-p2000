@@ -97,6 +97,7 @@ class P2000Data(object):
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
         _LOGGER.debug("Fetch URL: %s", self._url)
+        events = []
         try:
             self._feed = feedparser.parse(self._url,
                 etag=None if not self._feed
@@ -175,6 +176,7 @@ class P2000Data(object):
                                     if (capcodetext.find(capcode) != -1):
                                         _LOGGER.debug("Found capcode %s", capcode)
                                     else:
+                                        msgtext = ''
                                         _LOGGER.debug("Didn't find capcode %s, skip.", capcode)
                                         continue
 
@@ -188,7 +190,8 @@ class P2000Data(object):
                     event['capcodetext'] = capcodetext
                     _LOGGER.debug("Text: %s, Time: %s, Lat: %s, Long: %s, Distance: %s",
                         event['msgtext'], event['msgtime'], event['latitude'], event['longitude'], event['distance'])
-                    self._data = event
+                    events.append(event)
+                    self._data = events
 
         except ValueError as err:
             _LOGGER.error("Error feedparser %s", err.args)
@@ -225,12 +228,13 @@ class P2000Sensor(Entity):
         attrs = {}
         data = self._data.latest_data
         if data:
-            attrs[ATTR_LONGITUDE] = data['longitude']
-            attrs[ATTR_LATITUDE] = data['latitude']
-            attrs['distance'] = data['distance']
-            attrs['capcodes'] = data['capcodetext']
-            attrs['time'] = data['msgtime']
-            attrs[ATTR_ATTRIBUTION] = CONF_ATTRIBUTION
+            for event in data:
+                attrs[ATTR_LONGITUDE] = event['longitude']
+                attrs[ATTR_LATITUDE] = event['latitude']
+                attrs['distance'] = event['distance']
+                attrs['capcodes'] = event['capcodetext']
+                attrs['time'] = event['msgtime']
+                attrs[ATTR_ATTRIBUTION] = CONF_ATTRIBUTION
         return attrs
 
     async def async_update(self):
@@ -238,5 +242,6 @@ class P2000Sensor(Entity):
         await self._data.async_update()
         data = self._data.latest_data
         if data:
-            self._state = data['msgtext']
-            _LOGGER.debug("State updated to %s", self._state)
+            for event in data:
+                self._state = event['msgtext']
+                _LOGGER.debug("State updated to %s", self._state)
