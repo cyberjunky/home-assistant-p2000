@@ -69,8 +69,8 @@ Configuration variables:
 - **radius** (*Optional*): Only display on calls within this range in meters, it uses the lat/lon from your home-assistant.conf file as center or the optional values. (default = 5000)
 - **scan_interval** (*Optional*): Check every x seconds. (default = 30)
 - **name** (*Optional*): Name for sensor.
-- **lat** (*Optional*): Latitude of center radius.
-- **lon** (*Optional*): Longitude of center radius.
+- **latitude** (*Optional*): Latitude of center radius.
+- **longitude** (*Optional*): Longitude of center radius.
 - **capcodes** (*Optional*): Capcode(s) you want to filter on. http://capcode.nl
 
 You can use a state trigger event to send push notifications like this:
