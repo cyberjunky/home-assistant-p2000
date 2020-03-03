@@ -33,9 +33,8 @@ sensor:
   - platform: p2000
     regios: 18
     disciplines: 1,2,3,4
-    radius: 15000
     scan_interval: 20
-    capcodes: 1403001, 1403003
+    capcodes: 1403001,1403003
   
   - platform: p2000
     name: Amsterdam
