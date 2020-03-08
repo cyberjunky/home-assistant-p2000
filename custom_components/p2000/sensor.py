@@ -99,7 +99,10 @@ class P2000Data:
     async def async_update(self):
         """Update data."""
         _LOGGER.debug("Fetch URL: %s", self._url)
+        self._matched = False
         events = []
+        lat_event = 0.0
+        lon_event = 0.0
         try:
             self._feed = feedparser.parse(
                 self._url,
@@ -111,7 +114,6 @@ class P2000Data:
             if not self._feed:
                 _LOGGER.debug("Failed to get data from feed")
             else:
-                msgtext = ""
                 if self._feed.bozo != 0:
                     _LOGGER.debug("Error parsing feed %s", self._url)
                 elif len(self._feed.entries) > 0:
@@ -139,6 +141,8 @@ class P2000Data:
                             continue
 
                         _LOGGER.debug("New emergency event found.")
+                        _LOGGER.debug(item.title.replace("~", "") + "\n" + pubdate + "\n"
+                                )
                         self._lastmsg_time = lastmsg_time
 
                         if "geo_lat" in item:
@@ -152,9 +156,7 @@ class P2000Data:
                             continue
 
                         if lat_event and lon_event:
-                            my_loc = (self._lat, self._lon)
-                            event_loc = (lat_event, lon_event)
-                            dist = vincenty(my_loc, event_loc).meters
+                            dist = vincenty((self._lat, self._lon), (lat_event, lon_event)).meters
 
                             msgtext = (
                                 item.title.replace("~", "") + "\n" + pubdate + "\n"
@@ -170,6 +172,9 @@ class P2000Data:
                                 self._matched = False
                                 _LOGGER.debug("Outside range")
                                 continue
+                            else:
+                                self._matched = True
+                                _LOGGER.debug("Inside range")
 
                         if "summary" in item:
                             capcodetext = item.summary.replace("<br />", "\n")
