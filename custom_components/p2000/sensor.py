@@ -1,8 +1,8 @@
+"""Support for P2000 sensors."""
 import datetime
 import logging
 
 import feedparser
-from geopy.distance import vincenty
 import voluptuous as vol
 
 from homeassistant.components.sensor import PLATFORM_SCHEMA
@@ -19,6 +19,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 import homeassistant.util as util
 from homeassistant.util import Throttle
+from homeassistant.util.location import distance
 
 BASE_URL = "https://feeds.livep2000.nl?r={}&d={}"
 _LOGGER = logging.getLogger(__name__)
@@ -78,7 +79,6 @@ class P2000Data:
         self._feed = None
         self._lastmsg_time = None
         self._restart = True
-        self._matched = False
         self._data = None
 
         if self._capcodes:
@@ -98,121 +98,105 @@ class P2000Data:
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def async_update(self):
         """Update data."""
-        _LOGGER.debug("Fetch URL: %s", self._url)
-        self._matched = False
-        events = []
-        lat_event = 0.0
-        lon_event = 0.0
+        _LOGGER.debug("Feed URL: %s", self._url)
         try:
             self._feed = feedparser.parse(
                 self._url,
                 etag=None if not self._feed else self._feed.get("etag"),
                 modified=None if not self._feed else self._feed.get("modified"),
             )
-            _LOGGER.debug("Fetched data = %s", self._feed)
+            _LOGGER.debug("Fetched feed = %s", self._feed)
 
             if not self._feed:
-                _LOGGER.debug("Failed to get data from feed")
+                _LOGGER.debug("Failed to get feed")
             else:
                 if self._feed.bozo != 0:
                     _LOGGER.debug("Error parsing feed %s", self._url)
                 elif len(self._feed.entries) > 0:
-                    _LOGGER.debug("%s entries downloaded", len(self._feed.entries))
+                    _LOGGER.debug("Got %s entries", len(self._feed.entries))
+
+                    pubdate = self._feed.entries[0]["published"]
 
                     if self._restart:
-                        pubdate = self._feed.entries[0]["published"]
                         self._lastmsg_time = self._convert_time(pubdate)
                         self._restart = False
                         _LOGGER.debug("Last datestamp read %s", self._lastmsg_time)
                         return
 
                     for item in reversed(self._feed.entries):
-                        lat_event = 0.0
-                        lon_event = 0.0
-                        dist = 0
-                        capcodetext = ""
-                        self._matched = False
+                        eventmsg = ""
 
-                        if "published" in item:
-                            pubdate = item.published
-                            lastmsg_time = self._convert_time(pubdate)
-
+                        lastmsg_time = self._convert_time(item.published)
                         if lastmsg_time < self._lastmsg_time:
                             continue
-
-                        _LOGGER.debug("New emergency event found.")
-                        _LOGGER.debug(item.title.replace("~", "") + "\n" + pubdate + "\n"
-                                )
                         self._lastmsg_time = lastmsg_time
+
+                        eventmsg = item.title.replace("~", "") + "\n" + pubdate + "\n"
+                        _LOGGER.debug("New emergency event found: %s", eventmsg)
 
                         if "geo_lat" in item:
                             lat_event = float(item.geo_lat)
-                        else:
-                            continue
-
-                        if "geo_long" in item:
                             lon_event = float(item.geo_long)
+                            dist = distance(self._lat, self._lon, lat_event, lon_event)
+                            if self._radius:
+                                _LOGGER.debug("Filtering on Radius %s", self._radius)
+                                _LOGGER.debug("Calculated distance %d m", dist)
+                                if dist > self._radius:
+                                    eventmsg = ""
+                                    _LOGGER.debug("Radius filter mismatch")
+                                    continue
+                                else:
+                                    _LOGGER.debug("Radius filter matched")
                         else:
-                            continue
-
-                        if lat_event and lon_event:
-                            dist = vincenty((self._lat, self._lon), (lat_event, lon_event)).meters
-
-                            msgtext = (
-                                item.title.replace("~", "") + "\n" + pubdate + "\n"
-                            )
-                            _LOGGER.debug(
-                                "Calculated distance %d meters, max. range %d meters",
-                                dist,
-                                self._radius,
-                            )
-
-                        if self._radius:
-                            if dist > self._radius:
-                                self._matched = False
-                                _LOGGER.debug("Outside range")
-                                continue
-                            else:
-                                self._matched = True
-                                _LOGGER.debug("Inside range")
+                            _LOGGER.debug("No location info in item")
+                            lat_event = 0.0
+                            lon_event = 0.0
+                            dist = 0
 
                         if "summary" in item:
                             capcodetext = item.summary.replace("<br />", "\n")
+                        else:
+                            capcodetext = ""
 
-                            if self._capcodelist:
-                                for capcode in self._capcodelist:
-                                    _LOGGER.debug(
-                                        "Searching for capcode %s in %s",
-                                        capcode.strip(),
-                                        capcodetext,
-                                    )
-                                    if capcodetext.find(capcode) != -1:
-                                        _LOGGER.debug("Found capcode %s", capcode)
-                                        self._matched = True
-                                    else:
-                                        _LOGGER.debug(
-                                            "Didn't find capcode %s, skip.", capcode
-                                        )
-                                        continue
+                        if self._capcodelist:
+                            _LOGGER.debug(
+                                "Filtering on Capcode(s) %s", self._capcodelist
+                            )
+                            capfound = False
+                            for capcode in self._capcodelist:
+                                _LOGGER.debug(
+                                    "Searching for capcode %s in %s",
+                                    capcode.strip(),
+                                    capcodetext,
+                                )
+                                if capcodetext.find(capcode) != -1:
+                                    _LOGGER.debug("Capcode filter matched")
+                                    capfound = True
+                                    break
+                                else:
+                                    _LOGGER.debug("Capcode filter mismatch")
+                                    continue
+                            if not capfound:
+                                eventmsg = ""
 
-                if self._matched:
-                    event = {}
-                    event["msgtext"] = msgtext
-                    event["latitude"] = lat_event
-                    event["longitude"] = lon_event
-                    event["distance"] = int(round(dist))
-                    event["msgtime"] = lastmsg_time
-                    event["capcodetext"] = capcodetext
-                    _LOGGER.debug(
-                        "Text: %s, Time: %s, Lat: %s, Long: %s, Distance: %s",
-                        event["msgtext"],
-                        event["msgtime"],
-                        event["latitude"],
-                        event["longitude"],
-                        event["distance"],
-                    )
-                    events.append(event)
-                    self._data = events
+                        if eventmsg:
+                            event = {}
+                            event["msgtext"] = eventmsg
+                            event["latitude"] = lat_event
+                            event["longitude"] = lon_event
+                            event["distance"] = int(round(dist))
+                            event["msgtime"] = lastmsg_time
+                            event["capcodetext"] = capcodetext
+                            _LOGGER.debug(
+                                "Text: %s, Time: %s, Lat: %s, Long: %s, Distance: %s, Capcodetest: %s",
+                                event["msgtext"],
+                                event["msgtime"],
+                                event["latitude"],
+                                event["longitude"],
+                                event["distance"],
+                                event["capcodetext"],
+                            )
+                            self._data = event
 
         except ValueError as err:
             _LOGGER.error("Error feedparser %s", err.args)
@@ -249,13 +233,12 @@ class P2000Sensor(Entity):
         attrs = {}
         data = self._data.latest_data
         if data:
-            for event in data:
-                attrs[ATTR_LONGITUDE] = event["longitude"]
-                attrs[ATTR_LATITUDE] = event["latitude"]
-                attrs["distance"] = event["distance"]
-                attrs["capcodes"] = event["capcodetext"]
-                attrs["time"] = event["msgtime"]
-                attrs[ATTR_ATTRIBUTION] = CONF_ATTRIBUTION
+            attrs[ATTR_LONGITUDE] = data["longitude"]
+            attrs[ATTR_LATITUDE] = data["latitude"]
+            attrs["distance"] = data["distance"]
+            attrs["capcodes"] = data["capcodetext"]
+            attrs["time"] = data["msgtime"]
+            attrs[ATTR_ATTRIBUTION] = CONF_ATTRIBUTION
         return attrs
 
     async def async_update(self):
@@ -263,6 +246,5 @@ class P2000Sensor(Entity):
         await self._data.async_update()
         data = self._data.latest_data
         if data:
-            for event in data:
-                self._state = event["msgtext"]
-                _LOGGER.debug("State updated to %s", self._state)
+            self._state = data["msgtext"]
+            _LOGGER.debug("State updated to %s", self._state)
