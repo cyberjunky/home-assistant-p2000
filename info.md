@@ -120,5 +120,18 @@ cards:
         type: map
 ```
 
+## Debugging
+If you experience unexpected output, please create an issue.
+Share your configuration and post some debug log info.
+You can obtain this by adding this line to your config and restart homeassistant.
+
+
+```
+logger:
+  default: info
+  logs:
+      custom_components.p2000: debug
+```
+
 ## Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
