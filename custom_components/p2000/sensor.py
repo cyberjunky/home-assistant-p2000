@@ -30,6 +30,7 @@ CONF_REGIOS = "regios"
 CONF_DISCIPLINES = "disciplines"
 CONF_CAPCODES = "capcodes"
 CONF_ATTRIBUTION = "Data provided by feeds.livep2000.nl"
+CONF_NOLOCATION = "nolocation"
 
 DEFAULT_NAME = "P2000"
 ICON = "mdi:ambulance"
@@ -44,6 +45,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_CAPCODES): cv.string,
         vol.Optional(CONF_LATITUDE): cv.latitude,
         vol.Optional(CONF_LONGITUDE): cv.longitude,
+        vol.Optional(CONF_NOLOCATION, default=False): cv.boolean,
     }
 )
 
@@ -73,6 +75,7 @@ class P2000Data:
         self._url = BASE_URL.format(
             config.get(CONF_REGIOS), config.get(CONF_DISCIPLINES)
         )
+        self._nolocation = config.get(CONF_NOLOCATION)
         self._radius = config.get(CONF_RADIUS)
         self._capcodes = config.get(CONF_CAPCODES)
         self._capcodelist = None
@@ -152,6 +155,10 @@ class P2000Data:
                             lat_event = 0.0
                             lon_event = 0.0
                             dist = 0
+                            if not self._nolocation:
+                                _LOGGER.debug("No location, discarding.")
+                                eventmsg = ""
+                                continue
 
                         if "summary" in item:
                             capcodetext = item.summary.replace("<br />", "\n")

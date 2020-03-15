@@ -85,6 +85,7 @@ Configuration variables:
 - **latitude** (*Optional*): Latitude of center radius.
 - **longitude** (*Optional*): Longitude of center radius.
 - **capcodes** (*Optional*): Capcode(s) you want to filter on. http://capcode.nl
+- **nolocation** (*Optional*): Set this to True to also show events without location data (default = False)
 
 You can use a state trigger event to send push notifications like this:
 ```yaml
