@@ -79,7 +79,7 @@ Configuration variables:
  * 2 = Ambulance
  * 3 = Politie
  * 4 = KNRM
-- **radius** (*Optional*): Only display on calls within this range in meters, it uses the lat/lon from your home-assistant.conf file as center or the optional values. (default = 5000)
+- **radius** (*Optional*): Only display on calls within this range in meters, it uses the lat/lon from your home-assistant.conf file as center or the optional latitude/longitude values.
 - **scan_interval** (*Optional*): Check every x seconds. (default = 30)
 - **name** (*Optional*): Name for sensor.
 - **latitude** (*Optional*): Latitude of center radius.
