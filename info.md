@@ -73,6 +73,10 @@ Configuration variables:
 - **capcodes** (*Optional*): Capcode(s) you want to filter on. http://capcode.nl
 - **nolocation** (*Optional*): Set this to True to also show events without location data (default = False)
 
+NOTE:
+Regarding capcodes;
+Make sure you specify the correct matching regio(s) in your config and remove leading 0's ie. capcode 0100001 is received as 100001 
+
 You can use a state trigger event to send push notifications like this:
 ```yaml
 # Example automation.yaml entry
