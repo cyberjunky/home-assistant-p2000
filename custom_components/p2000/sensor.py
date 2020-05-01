@@ -68,6 +68,7 @@ class P2000Data:
 
     def __init__(self, hass, config):
         """Initialize the data object."""
+        self._hass = hass
         self._lat = util.convert(config.get(CONF_LATITUDE, hass.config.latitude), float)
         self._lon = util.convert(
             config.get(CONF_LONGITUDE, hass.config.longitude), float
@@ -80,6 +81,8 @@ class P2000Data:
         self._capcodes = config.get(CONF_CAPCODES)
         self._capcodelist = None
         self._feed = None
+        self._etag = None
+        self._modfied = None
         self._lastmsg_time = None
         self._restart = True
         self._data = None
@@ -102,13 +105,19 @@ class P2000Data:
     async def async_update(self):
         """Update data."""
         _LOGGER.debug("Feed URL: %s", self._url)
+
+        if self._feed:
+            self._modified = self._feed.get("modified")
+            self._etag = self._feed.get("etag")
+        else:
+            self._modified = None
+            self._etag = None
+
         try:
-            self._feed = feedparser.parse(
-                self._url,
-                etag=None if not self._feed else self._feed.get("etag"),
-                modified=None if not self._feed else self._feed.get("modified"),
+            self._feed = await self._hass.async_add_executor_job(feedparser.parse,
+                self._url, self._etag, self._modfied
             )
-            _LOGGER.debug("Fetched feed = %s", self._feed)
+            _LOGGER.debug("Feed contents: %s", self._feed)
 
             if not self._feed:
                 _LOGGER.debug("Failed to get feed")
