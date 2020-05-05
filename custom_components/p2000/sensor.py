@@ -143,7 +143,7 @@ class P2000Data:
                             continue
                         self._lastmsg_time = lastmsg_time
 
-                        eventmsg = item.title.replace("~", "") + "\n" + pubdate + "\n"
+                        eventmsg = item.title.replace("~", "") + "\n" + item.published + "\n"
                         _LOGGER.debug("New emergency event found: %s", eventmsg)
 
                         if "geo_lat" in item:
