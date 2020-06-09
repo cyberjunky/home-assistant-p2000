@@ -72,6 +72,7 @@ Configuration variables:
 - **longitude** (*Optional*): Longitude of center radius.
 - **capcodes** (*Optional*): Capcode(s) you want to filter on. http://capcode.nl
 - **nolocation** (*Optional*): Set this to True to also show events without location data (default = False)
+- **contains** (*Optional*): Search for events which contains this word exactly how it is written, for example GRIP
 
 NOTE:
 Regarding capcodes;

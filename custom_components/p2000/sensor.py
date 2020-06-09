@@ -5,10 +5,6 @@ import logging
 import feedparser
 import voluptuous as vol
 
-import ssl
-if hasattr(ssl, '_create_unverified_context'):
-    ssl._create_default_https_context = ssl._create_unverified_context
-
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import (
     ATTR_ATTRIBUTION,
@@ -18,18 +14,23 @@ from homeassistant.const import (
     CONF_LONGITUDE,
     CONF_NAME,
     CONF_RADIUS,
+    CONF_SCAN_INTERVAL,
 )
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.entity import Entity
+from homeassistant.core import callback
 import homeassistant.util as util
-from homeassistant.util import Throttle
 from homeassistant.util.location import distance
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.dispatcher import dispatcher_send
+from homeassistant.helpers.event import async_track_time_interval
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.restore_state import RestoreEntity
 
 _LOGGER = logging.getLogger(__name__)
 
 BASE_URL = "https://feeds.livep2000.nl?r={}&d={}"
 
-MIN_TIME_BETWEEN_UPDATES = datetime.timedelta(seconds=10)
+DEFAULT_INTERVAL = datetime.timedelta(seconds=10)
+DATA_UPDATED = "p2000_data_updated"
 
 CONF_REGIOS = "regios"
 CONF_DISCIPLINES = "disciplines"
@@ -47,6 +48,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Required(CONF_REGIOS): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_DISCIPLINES, default=DEFAULT_DISCIPLINES): cv.string,
+        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_INTERVAL): vol.All(
+                    cv.time_period, cv.positive_timedelta
+                ),
         vol.Optional(CONF_RADIUS, 0): vol.Coerce(float),
         vol.Optional(CONF_CAPCODES): cv.string,
         vol.Optional(CONF_LATITUDE): cv.latitude,
@@ -61,13 +65,9 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
     """Set up the P2000 sensor."""
     data = P2000Data(hass, config)
 
-    try:
-        await data.async_update()
-    except ValueError as err:
-        _LOGGER.error("Error while fetching P2000 feed: %s", err)
-        return
+    async_track_time_interval(hass, data.async_update, config[CONF_SCAN_INTERVAL])
 
-    async_add_devices([P2000Sensor(data, config.get(CONF_NAME))], True)
+    async_add_devices([P2000Sensor(hass, data, config.get(CONF_NAME))], True)
 
 
 class P2000Data:
@@ -107,8 +107,7 @@ class P2000Data:
     def _convert_time(time):
         return datetime.datetime.strptime(time.split(",")[1][:-6], " %d %b %Y %H:%M:%S")
 
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    async def async_update(self):
+    async def async_update(self, dummy):
         """Update data."""
 
         if self._feed:
@@ -212,19 +211,23 @@ class P2000Data:
                     _LOGGER.debug("Event: %s", event)
                     self._data = event
 
+            dispatcher_send(self._hass, DATA_UPDATED)
+
         except ValueError as err:
             _LOGGER.error("Error parsing feed data %s", err)
             self._data = None
 
 
-class P2000Sensor(Entity):
+class P2000Sensor(RestoreEntity):
     """Representation of a P2000 Sensor."""
 
-    def __init__(self, data, name):
+    def __init__(self, hass, data, name):
         """Initialize a P2000 sensor."""
+        self._hass = hass
         self._data = data
         self._name = name
         self._state = None
+        self.attrs = {}
 
     @property
     def name(self):
@@ -242,6 +245,28 @@ class P2000Sensor(Entity):
         return self._state
 
     @property
+    def should_poll(self):
+        """Return the polling requirement for this sensor."""
+        return False
+
+    async def async_added_to_hass(self) -> None:
+        """Handle entity which will be added."""
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if not state:
+            return
+        self._state = state.state
+        self.attrs = state.attributes
+
+        async_dispatcher_connect(
+            self._hass, DATA_UPDATED, self._schedule_immediate_update
+        )
+
+    @callback
+    def _schedule_immediate_update(self):
+        self.async_schedule_update_ha_state(True)
+
+    @property
     def device_state_attributes(self):
         """Return the state attributes."""
         attrs = {}
@@ -253,11 +278,12 @@ class P2000Sensor(Entity):
             attrs["capcodes"] = data["capcodetext"]
             attrs["time"] = data["msgtime"]
             attrs[ATTR_ATTRIBUTION] = CONF_ATTRIBUTION
-        return attrs
+            self.attrs = attrs
 
-    async def async_update(self):
+        return self.attrs
+
+    def update(self):
         """Update current values."""
-        await self._data.async_update()
         data = self._data.latest_data
         if data:
             self._state = data["msgtext"]
