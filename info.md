@@ -13,7 +13,7 @@ and even plot location on the map.
 To use this component in your installation, add the following to your `configuration.yaml` file:
 
 ```yaml
-# Example configuration.yaml entry
+# Example configuration.yaml entries
 
 sensor:
   - platform: p2000
@@ -21,6 +21,7 @@ sensor:
     disciplines: 1,2,3,4
     scan_interval: 20
     capcodes: 1403001,1403003
+    icon: mdi:fire-truck
   
   - platform: p2000
     name: Amsterdam
