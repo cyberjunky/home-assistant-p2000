@@ -15,6 +15,7 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
+    CONF_ICON,
 )
 from homeassistant.core import callback
 import homeassistant.util as util
@@ -40,7 +41,7 @@ CONF_NOLOCATION = "nolocation"
 CONF_CONTAINS = "contains"
 
 DEFAULT_NAME = "P2000"
-ICON = "mdi:ambulance"
+DEFAULT_ICON = "mdi:ambulance"
 DEFAULT_DISCIPLINES = "1,2,3,4"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -57,6 +58,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_LONGITUDE): cv.longitude,
         vol.Optional(CONF_NOLOCATION, default=False): cv.boolean,
         vol.Optional(CONF_CONTAINS): cv.string,
+        vol.Optional(CONF_ICON, default=DEFAULT_ICON): cv.icon,
     }
 )
 
@@ -67,7 +69,7 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
 
     async_track_time_interval(hass, data.async_update, config[CONF_SCAN_INTERVAL])
 
-    async_add_devices([P2000Sensor(hass, data, config.get(CONF_NAME))], True)
+    async_add_devices([P2000Sensor(hass, data, config.get(CONF_NAME), config.get(CONF_ICON))], True)
 
 
 class P2000Data:
@@ -221,11 +223,12 @@ class P2000Data:
 class P2000Sensor(RestoreEntity):
     """Representation of a P2000 Sensor."""
 
-    def __init__(self, hass, data, name):
+    def __init__(self, hass, data, name, icon):
         """Initialize a P2000 sensor."""
         self._hass = hass
         self._data = data
         self._name = name
+        self._icon = icon
         self._state = None
         self.attrs = {}
 
@@ -237,7 +240,7 @@ class P2000Sensor(RestoreEntity):
     @property
     def icon(self):
         """Return the icon to use in the frontend."""
-        return ICON
+        return self._icon
 
     @property
     def state(self):
