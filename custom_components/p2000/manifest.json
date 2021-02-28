@@ -8,5 +8,6 @@
   ],
   "requirements": [
     "feedparser"
-  ]
+  ],
+  "version": "1.0.17"
 }
