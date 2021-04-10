@@ -107,7 +107,10 @@ class P2000Data:
 
     @staticmethod
     def _convert_time(time):
-        return datetime.datetime.strptime(time.split(",")[1][:-6], " %d %b %Y %H:%M:%S")
+        try:
+            return datetime.datetime.strptime(time.split(",")[1][:-6], " %d %b %Y %H:%M:%S")
+        except(IndexError):
+            return None
 
     async def async_update(self, dummy):
         """Update data."""
