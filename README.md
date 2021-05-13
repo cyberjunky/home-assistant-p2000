@@ -1,6 +1,21 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs)  [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
 
 # P2000 Sensor Component
+
+## NOTE: The RSS feed service has stopped it's service at 12-05-2021
+This is the official message
+```
+RSS server offline
+Wegens overmatig misbruik heeft livep2000.nl de rss server offline gehaald.
+Het gevolg was dat er overbelasting ontstond.
+We denken na over een oplossing, maar kunnen (helaas) geen beloften doen.
+
+Onze oprechte excusses. 
+```
+
+
+# P2000 Sensor Component
+
 This is a Custom Component for Home-Assistant (https://home-assistant.io) that tracks P2000 emergency events in The Netherlands.
 
 ## About
