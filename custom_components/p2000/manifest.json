@@ -1,13 +1,13 @@
 {
-  "domain": "p2000",
-  "name": "P2000 Sensor",
-  "documentation": "https://github.com/cyberjunky/home-assistant-p2000",
-  "dependencies": [],
-  "codeowners": [
-    "@cyberjunky"
-  ],
-  "requirements": [
-    "feedparser"
-  ],
-  "version": "1.0.18"
-}
+    "domain": "p2000",
+    "name": "P2000 Sensor",
+    "documentation": "https://github.com/cyberjunky/home-assistant-p2000",
+    "dependencies": [],
+    "codeowners": [
+      "@cyberjunky"
+    ],
+    "requirements": [
+      "feedparser"
+    ],
+    "version": "1.0.19"
+  }

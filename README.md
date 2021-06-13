@@ -2,17 +2,8 @@
 
 # P2000 Sensor Component
 
-## NOTE: The RSS feed service has stopped it's service at 12-05-2021
-This is the official message
-```
-RSS server offline
-Wegens overmatig misbruik heeft livep2000.nl de rss server offline gehaald.
-Het gevolg was dat er overbelasting ontstond.
-We denken na over een oplossing, maar kunnen (helaas) geen beloften doen.
-
-Onze oprechte excusses. 
-```
-
+## NOTE: We now use a new RSS feed service provided by Erwin from http://p2000.brandweer-berkel-enschot.nl/ thanks!
+Hence this version is in beta state.
 
 # P2000 Sensor Component
 

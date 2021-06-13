@@ -10,25 +10,24 @@ from homeassistant.const import (
     ATTR_ATTRIBUTION,
     ATTR_LATITUDE,
     ATTR_LONGITUDE,
+    CONF_ICON,
     CONF_LATITUDE,
     CONF_LONGITUDE,
     CONF_NAME,
     CONF_RADIUS,
     CONF_SCAN_INTERVAL,
-    CONF_ICON,
 )
 from homeassistant.core import callback
+import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.dispatcher import async_dispatcher_connect, dispatcher_send
+from homeassistant.helpers.event import async_track_time_interval
+from homeassistant.helpers.restore_state import RestoreEntity
 import homeassistant.util as util
 from homeassistant.util.location import distance
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import async_track_time_interval
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.restore_state import RestoreEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-BASE_URL = "https://feeds.livep2000.nl?r={}&d={}"
+BASE_URL = "http://p2000.brandweer-berkel-enschot.nl/homeassistant/rss.asp"
 
 DEFAULT_INTERVAL = datetime.timedelta(seconds=10)
 DATA_UPDATED = "p2000_data_updated"
@@ -36,22 +35,21 @@ DATA_UPDATED = "p2000_data_updated"
 CONF_REGIOS = "regios"
 CONF_DISCIPLINES = "disciplines"
 CONF_CAPCODES = "capcodes"
-CONF_ATTRIBUTION = "Data provided by feeds.livep2000.nl"
+CONF_ATTRIBUTION = "P2000 Livemonitor 2021 HomeAssistant"
 CONF_NOLOCATION = "nolocation"
 CONF_CONTAINS = "contains"
 
 DEFAULT_NAME = "P2000"
 DEFAULT_ICON = "mdi:ambulance"
-DEFAULT_DISCIPLINES = "1,2,3,4"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_REGIOS): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Optional(CONF_DISCIPLINES, default=DEFAULT_DISCIPLINES): cv.string,
+        vol.Optional(CONF_DISCIPLINES): cv.string,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_INTERVAL): vol.All(
-                    cv.time_period, cv.positive_timedelta
-                ),
+            cv.time_period, cv.positive_timedelta
+        ),
         vol.Optional(CONF_RADIUS, 0): vol.Coerce(float),
         vol.Optional(CONF_CAPCODES): cv.string,
         vol.Optional(CONF_LATITUDE): cv.latitude,
@@ -69,7 +67,9 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
 
     async_track_time_interval(hass, data.async_update, config[CONF_SCAN_INTERVAL])
 
-    async_add_devices([P2000Sensor(hass, data, config.get(CONF_NAME), config.get(CONF_ICON))], True)
+    async_add_devices(
+        [P2000Sensor(hass, data, config.get(CONF_NAME), config.get(CONF_ICON))], True
+    )
 
 
 class P2000Data:
@@ -82,23 +82,34 @@ class P2000Data:
         self._lon = util.convert(
             config.get(CONF_LONGITUDE, hass.config.longitude), float
         )
-        self._url = BASE_URL.format(
-            config.get(CONF_REGIOS), config.get(CONF_DISCIPLINES)
-        )
+        self._regios = config.get(CONF_REGIOS)
+        self._url = BASE_URL
         self._nolocation = config.get(CONF_NOLOCATION)
         self._radius = config.get(CONF_RADIUS)
         self._capcodes = config.get(CONF_CAPCODES)
         self._contains = config.get(CONF_CONTAINS)
+        self._disciplines = config.get(CONF_DISCIPLINES)
         self._capcodelist = None
+        self._disciplinestable = {
+            "Brandweerdiensten": "1",
+            "Ambulancediensten": "2",
+            "Politiediensten": "3",
+            "Gereserveerd": "4",
+        }
         self._feed = None
-        self._etag = None
-        self._modified = None
+
         self._restart = True
         self._event_time = None
         self._data = None
 
         if self._capcodes:
             self._capcodelist = self._capcodes.split(",")
+
+        if self._regios:
+            self._regioslist = self._regios.split(",")
+
+        if self._disciplines:
+            self._disciplineslist = self._disciplines.split(",")
 
     @property
     def latest_data(self):
@@ -108,24 +119,18 @@ class P2000Data:
     @staticmethod
     def _convert_time(time):
         try:
-            return datetime.datetime.strptime(time.split(",")[1][:-6], " %d %b %Y %H:%M:%S")
-        except(IndexError):
+            return datetime.datetime.strptime(
+                time.split(",")[1][:-6], " %d %b %Y %H:%M:%S"
+            )
+        except IndexError:
             return None
 
     async def async_update(self, dummy):
         """Update data."""
 
-        if self._feed:
-            self._modified = self._feed.get("modified")
-            self._etag = self._feed.get("etag")
-        else:
-            self._modified = None
-            self._etag = None
-
         self._feed = await self._hass.async_add_executor_job(
-            feedparser.parse, self._url, self._etag, self._modified
+            feedparser.parse, self._url
         )
-
         if not self._feed:
             _LOGGER.debug("Failed to get feed data from %s", self._url)
             return
@@ -146,17 +151,67 @@ class P2000Data:
             for entry in reversed(self._feed.entries):
 
                 event_msg = ""
-                event_caps = ""
+                event_cap = ""
                 event_time = self._convert_time(entry.published)
                 if event_time < self._event_time:
                     continue
                 self._event_time = event_time
-                event_msg = entry.title.replace("~", "") + "\n" + entry.published + "\n"
-                _LOGGER.debug("New P2000 event found: %s, at %s", event_msg, entry.published)
+                event_msg = entry.message
+                _LOGGER.debug(
+                    "New P2000 event found: %s, at %s", event_msg, entry.published
+                )
 
-                if "geo_lat" in entry:
-                    event_lat = float(entry.geo_lat)
-                    event_lon = float(entry.geo_long)
+                # Check regio
+                if "regcode" in entry:
+                    event_regio = entry.regcode.lstrip("0")
+                    if self._regioslist:
+                        _LOGGER.debug("Filtering on Regio(s) %s", self._regioslist)
+                        regiofound = False
+                        for regio in self._regioslist:
+                            _LOGGER.debug(
+                                "Searching for regio %s in %s",
+                                regio,
+                                event_regio,
+                            )
+                            if event_regio == regio:
+                                _LOGGER.debug("Regio matched")
+                                regiofound = True
+                                break
+                            _LOGGER.debug("Regio mismatch, discarding")
+                            continue
+                        if not regiofound:
+                            continue
+
+                if "dienst" in entry:
+                    if self._disciplines:
+                        try:
+                            event_dienstcode = self._disciplinestable[entry.dienst]
+                        except:
+                            _LOGGER.debug("Unknown discipline %s", entry.dienst)
+                        if self._disciplineslist:
+                            _LOGGER.debug(
+                                "Filtering on Disciplines(s) %s", self._disciplineslist
+                            )
+                            disciplinefound = False
+                            for discipline in self._disciplineslist:
+                                _LOGGER.debug(
+                                    "Searching for discipline %s in %s",
+                                    discipline,
+                                    event_dienstcode,
+                                )
+                                if event_dienstcode == discipline:
+                                    _LOGGER.debug("Discipline matched")
+                                    disciplinefound = True
+                                    break
+                                _LOGGER.debug("Discipline mismatch, discarding")
+                                continue
+                            if not disciplinefound:
+                                continue
+
+                # Check radius or nolocation
+                if "lat" in entry and entry.lat:
+                    event_lat = float(entry.lat)
+                    event_lon = float(entry.lon)
                     event_dist = distance(self._lat, self._lon, event_lat, event_lon)
                     event_dist = int(round(event_dist))
                     if self._radius:
@@ -178,24 +233,26 @@ class P2000Data:
                         _LOGGER.debug("No location found, discarding")
                         continue
 
-                if "summary" in entry:
-                    event_caps = entry.summary.replace("<br />", "\n")
-
-                if self._capcodelist:
-                    _LOGGER.debug("Filtering on Capcode(s) %s", self._capcodelist)
-                    capfound = False
-                    for capcode in self._capcodelist:
-                        _LOGGER.debug(
-                            "Searching for capcode %s in %s", capcode.strip(), event_caps,
-                        )
-                        if event_caps.find(capcode) != -1:
-                            _LOGGER.debug("Capcode filter matched")
-                            capfound = True
-                            break
-                        _LOGGER.debug("Capcode filter mismatch, discarding")
-                        continue
-                    if not capfound:
-                        continue
+                # Check capcodes if defined
+                if "code" in entry:
+                    event_cap = entry.code.strip()
+                    if self._capcodelist:
+                        _LOGGER.debug("Filtering on Capcode(s) %s", self._capcodelist)
+                        capfound = False
+                        for capcode in self._capcodelist:
+                            _LOGGER.debug(
+                                "Searching for capcode %s in %s",
+                                capcode.strip(),
+                                event_cap,
+                            )
+                            if event_cap == capcode:
+                                _LOGGER.debug("Capcode filter matched")
+                                capfound = True
+                                break
+                            _LOGGER.debug("Capcode filter mismatch, discarding")
+                            continue
+                        if not capfound:
+                            continue
 
                 if self._contains:
                     _LOGGER.debug("Filtering on Contains string %s", self._contains)
@@ -212,7 +269,7 @@ class P2000Data:
                     event["longitude"] = event_lon
                     event["distance"] = event_dist
                     event["msgtime"] = event_time
-                    event["capcodetext"] = event_caps
+                    event["capcodetext"] = event_cap
                     _LOGGER.debug("Event: %s", event)
                     self._data = event
 
@@ -281,7 +338,7 @@ class P2000Sensor(RestoreEntity):
             attrs[ATTR_LONGITUDE] = data["longitude"]
             attrs[ATTR_LATITUDE] = data["latitude"]
             attrs["distance"] = data["distance"]
-            attrs["capcodes"] = data["capcodetext"]
+            attrs["capcode"] = data["capcodetext"]
             attrs["time"] = data["msgtime"]
             attrs[ATTR_ATTRIBUTION] = CONF_ATTRIBUTION
             self.attrs = attrs
