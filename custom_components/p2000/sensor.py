@@ -44,7 +44,7 @@ DEFAULT_ICON = "mdi:ambulance"
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
-        vol.Required(CONF_REGIOS): cv.string,
+        vol.Optional(CONF_REGIOS): cv.string,
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_DISCIPLINES): cv.string,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_INTERVAL): vol.All(
@@ -89,13 +89,11 @@ class P2000Data:
         self._capcodes = config.get(CONF_CAPCODES)
         self._contains = config.get(CONF_CONTAINS)
         self._disciplines = config.get(CONF_DISCIPLINES)
+
         self._capcodelist = None
-        self._disciplinestable = {
-            "Brandweerdiensten": "1",
-            "Ambulancediensten": "2",
-            "Politiediensten": "3",
-            "Gereserveerd": "4",
-        }
+        self._regiolist = None
+        self._disciplinelist = None
+
         self._feed = None
 
         self._restart = True
@@ -106,10 +104,10 @@ class P2000Data:
             self._capcodelist = self._capcodes.split(",")
 
         if self._regios:
-            self._regioslist = self._regios.split(",")
+            self._regiolist = self._regios.split(",")
 
         if self._disciplines:
-            self._disciplineslist = self._disciplines.split(",")
+            self._disciplinelist = self._disciplines.split(",")
 
     @property
     def latest_data(self):
@@ -150,24 +148,30 @@ class P2000Data:
         try:
             for entry in reversed(self._feed.entries):
 
-                event_msg = ""
-                event_cap = ""
+                event_msg = None
+                event_capcode = None
                 event_time = self._convert_time(entry.published)
                 if event_time < self._event_time:
                     continue
                 self._event_time = event_time
+
+                # Fill data from feed
                 event_msg = entry.message
+                event_regioname = entry.regname
+                event_regio = entry.regcode.lstrip("0")
+                event_discipline = entry.dienst
+                event_capcode = entry.code
+
                 _LOGGER.debug(
                     "New P2000 event found: %s, at %s", event_msg, entry.published
                 )
 
                 # Check regio
                 if "regcode" in entry:
-                    event_regio = entry.regcode.lstrip("0")
-                    if self._regioslist:
-                        _LOGGER.debug("Filtering on Regio(s) %s", self._regioslist)
+                    if self._regiolist:
+                        _LOGGER.debug("Filtering on Regio(s) %s", self._regiolist)
                         regiofound = False
-                        for regio in self._regioslist:
+                        for regio in self._regiolist:
                             _LOGGER.debug(
                                 "Searching for regio %s in %s",
                                 regio,
@@ -182,24 +186,21 @@ class P2000Data:
                         if not regiofound:
                             continue
 
+                # Check discipline
                 if "dienst" in entry:
                     if self._disciplines:
-                        try:
-                            event_dienstcode = self._disciplinestable[entry.dienst]
-                        except:
-                            _LOGGER.debug("Unknown discipline %s", entry.dienst)
-                        if self._disciplineslist:
+                        if self._disciplinelist:
                             _LOGGER.debug(
-                                "Filtering on Disciplines(s) %s", self._disciplineslist
+                                "Filtering on Disciplines(s) %s", self._disciplinelist
                             )
                             disciplinefound = False
-                            for discipline in self._disciplineslist:
+                            for discipline in self._disciplinelist:
                                 _LOGGER.debug(
                                     "Searching for discipline %s in %s",
                                     discipline,
-                                    event_dienstcode,
+                                    event_discipline,
                                 )
-                                if event_dienstcode == discipline:
+                                if event_discipline == discipline:
                                     _LOGGER.debug("Discipline matched")
                                     disciplinefound = True
                                     break
@@ -235,7 +236,6 @@ class P2000Data:
 
                 # Check capcodes if defined
                 if "code" in entry:
-                    event_cap = entry.code.strip()
                     if self._capcodelist:
                         _LOGGER.debug("Filtering on Capcode(s) %s", self._capcodelist)
                         capfound = False
@@ -243,9 +243,9 @@ class P2000Data:
                             _LOGGER.debug(
                                 "Searching for capcode %s in %s",
                                 capcode.strip(),
-                                event_cap,
+                                event_capcode,
                             )
-                            if event_cap == capcode:
+                            if event_capcode == capcode.strip():
                                 _LOGGER.debug("Capcode filter matched")
                                 capfound = True
                                 break
@@ -269,11 +269,14 @@ class P2000Data:
                     event["longitude"] = event_lon
                     event["distance"] = event_dist
                     event["msgtime"] = event_time
-                    event["capcodetext"] = event_cap
+                    event["capcode"] = event_capcode
+                    event["regio"] = event_regio
+                    event["regioname"] = event_regioname
+                    event["discipline"] = event_discipline
                     _LOGGER.debug("Event: %s", event)
                     self._data = event
 
-            dispatcher_send(self._hass, DATA_UPDATED)
+            dispatcher_send(self._hass, DATA_UPDATED + CONF_NAME)
 
         except ValueError as err:
             _LOGGER.error("Error parsing feed data %s", err)
@@ -300,6 +303,19 @@ class P2000Sensor(RestoreEntity):
     @property
     def icon(self):
         """Return the icon to use in the frontend."""
+        data = self._data.latest_data
+        if data:
+            if data["discipline"] == "Ambulancediensten":
+                return "mdi:ambulance"
+            elif data["discipline"] == "Brandweerdiensten":
+                return "mdi:fire-truck"
+            elif data["discipline"] == "Politiediensten":
+                return "mdi:car-emergency"
+            elif data["discipline"] == "Gereserveerd":
+                return "mdi:car-emergency"
+            elif data["discipline"] == "Lifeliner":
+                return "mdi:helicopter"
+
         return self._icon
 
     @property
@@ -322,7 +338,7 @@ class P2000Sensor(RestoreEntity):
         self.attrs = state.attributes
 
         async_dispatcher_connect(
-            self._hass, DATA_UPDATED, self._schedule_immediate_update
+            self._hass, DATA_UPDATED + CONF_NAME, self._schedule_immediate_update
         )
 
     @callback
@@ -338,7 +354,10 @@ class P2000Sensor(RestoreEntity):
             attrs[ATTR_LONGITUDE] = data["longitude"]
             attrs[ATTR_LATITUDE] = data["latitude"]
             attrs["distance"] = data["distance"]
-            attrs["capcode"] = data["capcodetext"]
+            attrs["capcode"] = data["capcode"]
+            attrs["regio"] = data["regio"]
+            attrs["regio name"] = data["regioname"]
+            attrs["discipline"] = data["discipline"]
             attrs["time"] = data["msgtime"]
             attrs[ATTR_ATTRIBUTION] = CONF_ATTRIBUTION
             self.attrs = attrs

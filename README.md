@@ -37,16 +37,15 @@ To use this component in your installation, add the following to your `configura
 
 sensor:
   - platform: p2000
-    regios: 18
-    disciplines: 1,2,3,4
     scan_interval: 20
     capcodes: 1403001,1403003
     icon: mdi:fire-truck
-  
+    nolocation: true
+    
   - platform: p2000
     name: Amsterdam
     regios: 13
-    disciplines: 1,2,3,4
+    disciplines: Politiediensten
     radius: 10000
     scan_interval: 10
     latitude: 52.3680
@@ -55,7 +54,8 @@ sensor:
 
 Configuration variables:
 
-- **regios** (*Required*): You have to specify at least one, if you want more seperate them by commas.
+- **regios** (*Optional*): You can specify one, if you want more seperate them by commas, without it you trigger on all (is alot)
+ * 0 = Gereserveerd
  * 1 = Groningen
  * 2 = Friesland
  * 3 = Drenthe
@@ -81,17 +81,18 @@ Configuration variables:
  * 23 = Limburg Noord
  * 24 = Limburg Zuid
  * 25 = Flevoland
-- **disciplines** (*Optional*): Disciplines to display, separate them by commas. (default = 1,2,3,4)
- * 1 = Brandweer
- * 2 = Ambulance
- * 3 = Politie
- * 4 = KNRM
+- **disciplines** (*Optional*): Disciplines to display, separate them by commas. (default = all of them)
+ * Brandweerdiensten = Brandweer
+ * Ambulancediensten = Ambulance
+ * Politiediensten = Politie
+ * Gereserveerd = Gereserveerd
+ * [Possible more of them]
 - **radius** (*Optional*): Only display on calls within this range in meters, it uses the lat/lon from your home-assistant.conf file as center or the optional latitude/longitude values.
 - **scan_interval** (*Optional*): Check every x seconds. (default = 30)
 - **name** (*Optional*): Name for sensor.
 - **latitude** (*Optional*): Latitude of center radius.
 - **longitude** (*Optional*): Longitude of center radius.
-- **capcodes** (*Optional*): Capcode(s) you want to filter on. http://capcode.nl
+- **capcodes** (*Optional*): Capcode(s) you want to filter on. http://capcode.nl. You can specify one, if you want more seperate them by commas. (full 7 digit notation)
 - **nolocation** (*Optional*): Set this to True to also show events without location data (default = False)
 - **contains** (*Optional*): Search for events which contains this word exactly how it is written, for example GRIP
 
@@ -131,7 +132,6 @@ Lovelace card example:
 ```yaml
 cards:
       - entity: sensor.p2000
-        icon: 'mdi:ambulance'
         name: P2000 Dordrecht
         type: sensor
       - entity: sensor.amsterdam
