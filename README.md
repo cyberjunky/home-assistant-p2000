@@ -2,7 +2,8 @@
 
 # P2000 Sensor Component
 
-## NOTE: We now use a new RSS feed service provided by Erwin from http://p2000.brandweer-berkel-enschot.nl/ thanks!
+## NOTE: 
+We now use a new RSS feed service provided by Erwin from http://p2000.brandweer-berkel-enschot.nl/ thanks!
 Hence this version is in beta state.
 
 # P2000 Sensor Component
@@ -10,7 +11,7 @@ Hence this version is in beta state.
 This is a Custom Component for Home-Assistant (https://home-assistant.io) that tracks P2000 emergency events in The Netherlands.
 
 ## About
-This component queries http://feeds.livep2000.nl at the configured interval and applies filters for range, type(s) and regio(s) set.
+This component queries http://p2000.brandweer-berkel-enschot.nl/ at the configured interval and applies filters for range (if lat/lon is available), discipline(s) and regio(s) set.
 
 When events are found the P2000 sensor state gets set, which you can use to trigger automation, display sensor data,
 and even plot location on the map.
