@@ -54,7 +54,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_CAPCODES): cv.string,
         vol.Optional(CONF_LATITUDE): cv.latitude,
         vol.Optional(CONF_LONGITUDE): cv.longitude,
-        vol.Optional(CONF_NOLOCATION, default=False): cv.boolean,
+        vol.Optional(CONF_NOLOCATION, default=True): cv.boolean,
         vol.Optional(CONF_CONTAINS): cv.string,
         vol.Optional(CONF_ICON, default=DEFAULT_ICON): cv.icon,
     }
