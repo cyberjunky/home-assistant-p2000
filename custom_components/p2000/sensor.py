@@ -346,7 +346,7 @@ class P2000Sensor(RestoreEntity):
         self.async_schedule_update_ha_state(True)
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return the state attributes."""
         attrs = {}
         data = self._data.latest_data
