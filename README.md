@@ -110,14 +110,22 @@ automation:
     trigger:
       platform: state
       entity_id: sensor.p2000
+    condition:
+      alias: "Time 07~23"
+      condition: time
+      after: "07:00:00"
+      before: "23:00:00"
     action:
       - service_template: notify.html5
         data_template:
-          title: "P2000 Bericht"
+          title: P2000 Bericht - {{ state_attr('sensor.p2000', 'discipline') }}
           message: >
-            {{ states.sensor.p2000.state + states.sensor.p2000.attributes.capcodes }}
+            {{ states('sensor.p2000') }} (Capcode: {{ state_attr('sensor.p2000', 'capcode') }})
           data:
-            url: "https://www.google.com/maps/search/?api=1&query={{ states.sensor.p2000.attributes.latitude }},{{ states.sensor.p2000.attributes.longitude }}"
+            # iOS URL
+            url: "https://www.google.com/maps/search/?api=1&query={{ state_attr('sensor.p2000', 'latitude') }},{{ state_attr('sensor.p2000', 'longitude') }}"
+            # Android URL
+            clickAction: "https://www.google.com/maps/search/?api=1&query={{ state_attr('sensor.p2000', 'latitude') }},{{ state_attr('sensor.p2000', 'longitude') }}"
 ```
 
 Above is for html5 notify, you can click the notify message to open google maps with the lat/lon location if available in the P2000 message.
