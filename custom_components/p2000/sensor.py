@@ -294,6 +294,7 @@ class P2000Sensor(RestoreEntity):
         self._icon = icon
         self._state = None
         self.attrs = {}
+        self._attr_unique_id = self._name
 
     @property
     def name(self):
