@@ -37,7 +37,7 @@ sensor:
 
 Configuration variables:
 
-- **regios** (*Required*): You have to specify at least one, if you want more seperate them by commas.
+- **regios** (*Required*): You have to specify at least one, if you want more separate them by commas.
  * 0 = Gereserveerd
  * 1 = Groningen
  * 2 = Friesland
@@ -75,7 +75,7 @@ Configuration variables:
 - **name** (*Optional*): Name for sensor.
 - **latitude** (*Optional*): Latitude of center radius.
 - **longitude** (*Optional*): Longitude of center radius.
-- **capcodes** (*Optional*): Capcode(s) you want to filter on. http://capcode.nl. You can specify one, if you want more seperate them by commas. (full 7 digit notation)
+- **capcodes** (*Optional*): Capcode(s) you want to filter on. http://capcode.nl. You can specify one, if you want more separate them by commas. (full 7 digit notation)
 - **nolocation** (*Optional*): Set this to True to also show events without location data (default = False)
 - **contains** (*Optional*): Search for events which contains this word exactly how it is written, for example GRIP
 
